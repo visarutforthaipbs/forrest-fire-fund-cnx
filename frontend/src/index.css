@@ -1,0 +1,164 @@
+:root {
+  font-family: "DB Helvethaica X", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  /* Updated color palette */
+  --primary-color: #f47b20;
+  --secondary-color: #4caf50;
+  --accent-color: #2f4858;
+  --background-color: #fdf9f3;
+  --card-bg-color: #fafaf9;
+  --muted-color: #8d6e63;
+
+  color-scheme: light;
+  color: var(--accent-color);
+  background-color: var(--background-color);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  font-weight: 500;
+  color: var(--accent-color);
+  text-decoration: inherit;
+}
+a:hover {
+  color: var(--primary-color);
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--background-color);
+  color: var(--accent-color);
+}
+
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+  color: var(--accent-color);
+}
+
+button {
+  border-radius: 8px;
+  border: 1px solid var(--muted-color);
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: var(--card-bg-color);
+  color: var(--accent-color);
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+button:hover {
+  border-color: var(--primary-color);
+  background-color: var(--primary-color);
+  color: white;
+}
+button:focus,
+button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+/* Custom styles for Leaflet integration */
+.leaflet-popup-content {
+  font-family: "DB Helvethaica X", sans-serif !important;
+  color: var(--accent-color) !important;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 8px !important;
+  background-color: var(--card-bg-color) !important;
+  border: 1px solid var(--muted-color) !important;
+}
+
+.leaflet-popup-tip {
+  border-color: var(--card-bg-color) !important;
+}
+
+.custom-marker {
+  border: none !important;
+  background: none !important;
+}
+
+/* Ensure map takes full height */
+.leaflet-container {
+  height: 100% !important;
+  width: 100% !important;
+}
+
+/* Custom scrollbar for better UX with new color palette */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--muted-color);
+  border-radius: 4px;
+  opacity: 0.3;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #e06b18; /* Darker shade of primary */
+}
+
+/* Additional utility classes for the new color palette */
+.bg-primary {
+  background-color: var(--primary-color) !important;
+}
+.bg-secondary {
+  background-color: var(--secondary-color) !important;
+}
+.bg-accent {
+  background-color: var(--accent-color) !important;
+}
+.bg-background {
+  background-color: var(--background-color) !important;
+}
+.bg-card {
+  background-color: var(--card-bg-color) !important;
+}
+.bg-muted {
+  background-color: var(--muted-color) !important;
+}
+
+.text-primary {
+  color: var(--primary-color) !important;
+}
+.text-secondary {
+  color: var(--secondary-color) !important;
+}
+.text-accent {
+  color: var(--accent-color) !important;
+}
+.text-muted {
+  color: var(--muted-color) !important;
+}
+
+.border-primary {
+  border-color: var(--primary-color) !important;
+}
+.border-secondary {
+  border-color: var(--secondary-color) !important;
+}
+.border-accent {
+  border-color: var(--accent-color) !important;
+}
+.border-muted {
+  border-color: var(--muted-color) !important;
+}
