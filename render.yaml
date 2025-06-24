@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: fire-management-backend
+    env: node
+    plan: free
+    buildCommand: cd backend && npm install
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        fromDatabase:
+          name: fire-management-db
+          property: connectionString
+      - key: FRONTEND_URL
+        value: https://forrest-fire-fund-cnx.vercel.app
+
+databases:
+  - name: fire-management-db
+    plan: free
