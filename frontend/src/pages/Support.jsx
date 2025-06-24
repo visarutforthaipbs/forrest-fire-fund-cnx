@@ -233,13 +233,18 @@ const Support = () => {
       };
 
       // Send to backend API
-      const response = await fetch("http://localhost:3001/api/support", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(supportData),
-      });
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_URL || "http://localhost:3001/api"
+        }/support`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(supportData),
+        }
+      );
 
       const result = await response.json();
 

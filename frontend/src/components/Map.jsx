@@ -9,6 +9,7 @@ import {
 } from "react-leaflet";
 import L from "leaflet";
 import * as topojson from "topojson-client";
+import { getApiUrl } from "../config/api";
 import {
   Box,
   Button,
@@ -300,7 +301,7 @@ const Map = ({ onVillageSelect, selectedVillage }) => {
   useEffect(() => {
     const loadForestTypes = async () => {
       try {
-        const response = await fetch("http://localhost:3001/api/forest-types");
+        const response = await fetch(getApiUrl("forest-types"));
         const result = await response.json();
         if (result.success) {
           setForestTypes(result.data);
@@ -317,7 +318,7 @@ const Map = ({ onVillageSelect, selectedVillage }) => {
   useEffect(() => {
     const loadFirebreakData = async () => {
       try {
-        const response = await fetch("http://localhost:3001/api/firebreaks");
+        const response = await fetch(getApiUrl("firebreaks"));
         const result = await response.json();
         if (result.success) {
           setFirebreakData(result.data);
@@ -334,9 +335,7 @@ const Map = ({ onVillageSelect, selectedVillage }) => {
   useEffect(() => {
     const loadFuelManagementData = async () => {
       try {
-        const response = await fetch(
-          "http://localhost:3001/api/fuel-management"
-        );
+        const response = await fetch(getApiUrl("fuel-management"));
         const result = await response.json();
         if (result.success) {
           setFuelManagementData(result.data);
@@ -353,9 +352,7 @@ const Map = ({ onVillageSelect, selectedVillage }) => {
   useEffect(() => {
     const loadFireSentryData = async () => {
       try {
-        const response = await fetch(
-          "http://localhost:3001/api/fire-sentry-stations"
-        );
+        const response = await fetch(getApiUrl("fire-sentry-stations"));
         const result = await response.json();
         if (result.success) {
           setFireSentryData(result.data);
@@ -372,7 +369,7 @@ const Map = ({ onVillageSelect, selectedVillage }) => {
   useEffect(() => {
     const loadVillageWeirsData = async () => {
       try {
-        const response = await fetch("http://localhost:3001/api/village-weirs");
+        const response = await fetch(getApiUrl("village-weirs"));
         const result = await response.json();
         if (result.success) {
           setVillageWeirsData(result.data);
@@ -389,9 +386,7 @@ const Map = ({ onVillageSelect, selectedVillage }) => {
   useEffect(() => {
     const loadWildfireCheckData = async () => {
       try {
-        const response = await fetch(
-          "http://localhost:3001/api/wildfire-check-points"
-        );
+        const response = await fetch(getApiUrl("wildfire-check-points"));
         const result = await response.json();
         if (result.success) {
           setWildfireCheckData(result.data);
@@ -408,9 +403,7 @@ const Map = ({ onVillageSelect, selectedVillage }) => {
   useEffect(() => {
     const loadBurnAreasData = async () => {
       try {
-        const response = await fetch(
-          "http://localhost:3001/api/burn-areas-2024-simplified"
-        );
+        const response = await fetch(getApiUrl("burn-areas-2024-simplified"));
         const result = await response.json();
         if (result.success) {
           setBurnAreasData(result.data);
@@ -444,7 +437,7 @@ const Map = ({ onVillageSelect, selectedVillage }) => {
           selectedVillage.gisData["new-uid"]
         );
         const response = await fetch(
-          `http://localhost:3001/api/buildings/${selectedVillage.gisData["new-uid"]}`
+          getApiUrl(`buildings/${selectedVillage.gisData["new-uid"]}`)
         );
         const result = await response.json();
 

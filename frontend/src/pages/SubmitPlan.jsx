@@ -204,7 +204,9 @@ const SubmitPlan = () => {
 
       // Submit to API
       const response = await fetch(
-        "http://localhost:3001/api/community-plans",
+        `${
+          import.meta.env.VITE_API_URL || "http://localhost:3001/api"
+        }/community-plans`,
         {
           method: "POST",
           headers: {

@@ -10,6 +10,9 @@ yarn-error.log*
 .env.development.local
 .env.test.local
 .env.production.local
+frontend/.env
+!.env.example
+!frontend/.env.example
 
 # Build outputs
 frontend/dist/
