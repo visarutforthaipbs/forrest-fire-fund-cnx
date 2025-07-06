@@ -52,6 +52,34 @@ class ApiService {
   async healthCheck() {
     return this.fetchWithErrorHandling("/health");
   }
+
+  // Batch API - get multiple datasets in one request
+  async getBatchData(datasets) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/batch-data`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ datasets }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Batch API request failed");
+      }
+
+      return data.data;
+    } catch (error) {
+      console.error("Batch API Error:", error);
+      throw error;
+    }
+  }
 }
 
 export default new ApiService();

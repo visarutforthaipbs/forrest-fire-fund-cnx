@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import compression from "compression";
 import { readFileSync, existsSync } from "fs";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
@@ -17,27 +18,66 @@ const PORT = process.env.PORT || 3001;
 connectDB();
 
 // Middleware
+app.use(compression()); // Enable gzip compression
 app.use(cors());
 app.use(express.json());
 
-// Load data files
+// Load and cache all data files on startup
 let gisData, communityPlans;
+let cachedData = {};
 
-try {
-  gisData = JSON.parse(
-    readFileSync(join(__dirname, "allfvill_newuid.geojson"), "utf8")
-  );
-  communityPlans = JSON.parse(
-    readFileSync(join(__dirname, "comunity-plan.json"), "utf8")
-  );
-  console.log(`✅ Loaded ${gisData.features.length} villages from GIS data`);
-  console.log(
-    `✅ Loaded ${Object.keys(communityPlans.villages).length} community plans`
-  );
-} catch (error) {
-  console.error("❌ Error loading data files:", error);
-  process.exit(1);
-}
+const loadDataFiles = () => {
+  try {
+    console.log("📦 Loading data files into memory...");
+
+    // Load village and community plan data
+    gisData = JSON.parse(
+      readFileSync(join(__dirname, "allfvill_newuid.geojson"), "utf8")
+    );
+    communityPlans = JSON.parse(
+      readFileSync(join(__dirname, "comunity-plan.json"), "utf8")
+    );
+
+    // Cache all GeoJSON files
+    const dataFiles = [
+      { key: "forestTypes", file: "forrest-type-cnx.json" },
+      { key: "firebreaks", file: "wildfire_protect_all-20vills.geojson" },
+      { key: "fuelManagement", file: "Fuel_Manage_20vills.geojson" },
+      { key: "fireSentry", file: "FireSentry_Station_All.geojson" },
+      { key: "villageWeirs", file: "Village_Weir_All.geojson" },
+      { key: "wildfireCheck", file: "WildFire_Check_All_1.geojson" },
+      { key: "burnAreas", file: "burn_area_2024.geojson" },
+    ];
+
+    dataFiles.forEach(({ key, file }) => {
+      try {
+        const filePath = join(__dirname, "data", file);
+        if (existsSync(filePath)) {
+          cachedData[key] = JSON.parse(readFileSync(filePath, "utf8"));
+          console.log(`✅ Cached ${key} data`);
+        } else {
+          console.log(`⚠️  File not found: ${file}`);
+          cachedData[key] = null;
+        }
+      } catch (error) {
+        console.error(`❌ Error loading ${file}:`, error.message);
+        cachedData[key] = null;
+      }
+    });
+
+    console.log(`✅ Loaded ${gisData.features.length} villages from GIS data`);
+    console.log(
+      `✅ Loaded ${Object.keys(communityPlans.villages).length} community plans`
+    );
+    console.log(`✅ Cached ${Object.keys(cachedData).length} data files`);
+  } catch (error) {
+    console.error("❌ Error loading data files:", error);
+    process.exit(1);
+  }
+};
+
+// Load all data on startup
+loadDataFiles();
 
 // Function to determine village status based on community plan
 const getVillageStatus = (communityPlan) => {
@@ -278,15 +318,121 @@ app.get("/api/stats", (req, res) => {
   }
 });
 
+// Batch API endpoint - get multiple datasets in one request
+app.post("/api/batch-data", (req, res) => {
+  try {
+    const { datasets = [] } = req.body;
+
+    if (!Array.isArray(datasets) || datasets.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Invalid request",
+        message:
+          "datasets array is required and must contain at least one dataset name",
+      });
+    }
+
+    const availableDatasets = [
+      "villages",
+      "stats",
+      "forestTypes",
+      "firebreaks",
+      "fuelManagement",
+      "fireSentry",
+      "villageWeirs",
+      "wildfireCheck",
+      "burnAreas",
+      "burnAreasSimplified",
+    ];
+
+    const batchData = {};
+    const errors = {};
+
+    datasets.forEach((dataset) => {
+      try {
+        switch (dataset) {
+          case "villages":
+            batchData.villages = villages;
+            break;
+          case "stats":
+            batchData.stats = calculateStats();
+            break;
+          case "forestTypes":
+            batchData.forestTypes = cachedData.forestTypes;
+            break;
+          case "firebreaks":
+            batchData.firebreaks = cachedData.firebreaks;
+            break;
+          case "fuelManagement":
+            batchData.fuelManagement = cachedData.fuelManagement;
+            break;
+          case "fireSentry":
+            batchData.fireSentry = cachedData.fireSentry;
+            break;
+          case "villageWeirs":
+            batchData.villageWeirs = cachedData.villageWeirs;
+            break;
+          case "wildfireCheck":
+            batchData.wildfireCheck = cachedData.wildfireCheck;
+            break;
+          case "burnAreas":
+            batchData.burnAreas = cachedData.burnAreas;
+            break;
+          case "burnAreasSimplified":
+            if (cachedData.burnAreas) {
+              batchData.burnAreasSimplified = {
+                type: "FeatureCollection",
+                features: cachedData.burnAreas.features
+                  .slice(0, 10000)
+                  .map((feature) => ({
+                    type: "Feature",
+                    properties: {
+                      OBJECTID: feature.properties.OBJECTID,
+                    },
+                    geometry: feature.geometry,
+                  })),
+              };
+            }
+            break;
+          default:
+            errors[
+              dataset
+            ] = `Unknown dataset: ${dataset}. Available: ${availableDatasets.join(
+              ", "
+            )}`;
+        }
+      } catch (error) {
+        errors[dataset] = error.message;
+      }
+    });
+
+    const response = {
+      success: true,
+      data: batchData,
+      requested: datasets,
+      available: availableDatasets,
+    };
+
+    if (Object.keys(errors).length > 0) {
+      response.errors = errors;
+    }
+
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch batch data",
+      message: error.message,
+    });
+  }
+});
+
 // Get forest types data
 app.get("/api/forest-types", (req, res) => {
   try {
-    const forestData = JSON.parse(
-      readFileSync(join(__dirname, "data", "forrest-type-cnx.json"), "utf8")
-    );
     res.json({
       success: true,
-      data: forestData,
+      data: cachedData.forestTypes,
     });
   } catch (error) {
     res.status(500).json({
@@ -334,15 +480,9 @@ app.get("/api/buildings/:uid", (req, res) => {
 // Get firebreak lines data
 app.get("/api/firebreaks", (req, res) => {
   try {
-    const firebreakData = JSON.parse(
-      readFileSync(
-        join(__dirname, "data", "wildfire_protect_all-20vills.geojson"),
-        "utf8"
-      )
-    );
     res.json({
       success: true,
-      data: firebreakData,
+      data: cachedData.firebreaks,
     });
   } catch (error) {
     res.status(500).json({
@@ -356,15 +496,9 @@ app.get("/api/firebreaks", (req, res) => {
 // Get fuel management areas data
 app.get("/api/fuel-management", (req, res) => {
   try {
-    const fuelManagementData = JSON.parse(
-      readFileSync(
-        join(__dirname, "data", "Fuel_Manage_20vills.geojson"),
-        "utf8"
-      )
-    );
     res.json({
       success: true,
-      data: fuelManagementData,
+      data: cachedData.fuelManagement,
     });
   } catch (error) {
     res.status(500).json({
@@ -378,15 +512,9 @@ app.get("/api/fuel-management", (req, res) => {
 // Get fire sentry stations data
 app.get("/api/fire-sentry-stations", (req, res) => {
   try {
-    const fireSentryData = JSON.parse(
-      readFileSync(
-        join(__dirname, "data", "FireSentry_Station_All.geojson"),
-        "utf8"
-      )
-    );
     res.json({
       success: true,
-      data: fireSentryData,
+      data: cachedData.fireSentry,
     });
   } catch (error) {
     res.status(500).json({
@@ -400,12 +528,9 @@ app.get("/api/fire-sentry-stations", (req, res) => {
 // Get village weirs data
 app.get("/api/village-weirs", (req, res) => {
   try {
-    const villageWeirsData = JSON.parse(
-      readFileSync(join(__dirname, "data", "Village_Weir_All.geojson"), "utf8")
-    );
     res.json({
       success: true,
-      data: villageWeirsData,
+      data: cachedData.villageWeirs,
     });
   } catch (error) {
     res.status(500).json({
@@ -419,15 +544,9 @@ app.get("/api/village-weirs", (req, res) => {
 // Get wildfire check points data
 app.get("/api/wildfire-check-points", (req, res) => {
   try {
-    const wildfireCheckData = JSON.parse(
-      readFileSync(
-        join(__dirname, "data", "WildFire_Check_All_1.geojson"),
-        "utf8"
-      )
-    );
     res.json({
       success: true,
-      data: wildfireCheckData,
+      data: cachedData.wildfireCheck,
     });
   } catch (error) {
     res.status(500).json({
@@ -441,12 +560,9 @@ app.get("/api/wildfire-check-points", (req, res) => {
 // Get burn area 2024 data
 app.get("/api/burn-areas-2024", (req, res) => {
   try {
-    const burnAreaData = JSON.parse(
-      readFileSync(join(__dirname, "data", "burn_area_2024.geojson"), "utf8")
-    );
     res.json({
       success: true,
-      data: burnAreaData,
+      data: cachedData.burnAreas,
     });
   } catch (error) {
     res.status(500).json({
@@ -460,26 +576,31 @@ app.get("/api/burn-areas-2024", (req, res) => {
 // Get burn area 2024 data (simplified for performance)
 app.get("/api/burn-areas-2024-simplified", (req, res) => {
   try {
-    const burnAreaData = JSON.parse(
-      readFileSync(join(__dirname, "data", "burn_area_2024.geojson"), "utf8")
-    );
+    if (!cachedData.burnAreas) {
+      return res.status(404).json({
+        success: false,
+        error: "Burn areas data not available",
+      });
+    }
 
     // Simplify the data for better performance - take only first 10,000 features
     const simplifiedData = {
       type: "FeatureCollection",
-      features: burnAreaData.features.slice(0, 10000).map((feature) => ({
-        type: "Feature",
-        properties: {
-          OBJECTID: feature.properties.OBJECTID,
-        },
-        geometry: feature.geometry,
-      })),
+      features: cachedData.burnAreas.features
+        .slice(0, 10000)
+        .map((feature) => ({
+          type: "Feature",
+          properties: {
+            OBJECTID: feature.properties.OBJECTID,
+          },
+          geometry: feature.geometry,
+        })),
     };
 
     res.json({
       success: true,
       data: simplifiedData,
-      message: `Simplified dataset with ${simplifiedData.features.length} features out of ${burnAreaData.features.length} total`,
+      message: `Simplified dataset with ${simplifiedData.features.length} features out of ${cachedData.burnAreas.features.length} total`,
     });
   } catch (error) {
     res.status(500).json({

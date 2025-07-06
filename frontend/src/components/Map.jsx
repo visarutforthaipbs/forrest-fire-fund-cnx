@@ -279,142 +279,90 @@ const Map = ({ onVillageSelect, selectedVillage }) => {
   const [showBurnAreas, setShowBurnAreas] = useState(false);
   const burnAreasLayerRef = useRef(null);
 
+  // Progressive loading: Load critical data first, then optional layers
   useEffect(() => {
-    const loadVillages = async () => {
+    const loadProgressiveData = async () => {
       try {
         setLoading(true);
         setError(null);
-        const allVillages = await getAllVillages();
-        setVillages(allVillages);
+
+        // Import the API service
+        const apiService = await import("../services/apiService.js");
+
+        // Step 1: Load critical data first (villages and stats)
+        console.log("🚀 Loading critical data (villages & stats)...");
+
+        const criticalData = await apiService.default.getBatchData([
+          "villages",
+          "stats",
+        ]);
+
+        if (criticalData.villages) {
+          setVillages(criticalData.villages);
+          console.log("✅ Loaded villages:", criticalData.villages.length);
+        }
+
+        // Mark loading as complete for basic functionality
+        setLoading(false);
+
+        // Step 2: Load optional layers in background
+        console.log("📦 Loading optional layers...");
+
+        const optionalData = await apiService.default.getBatchData([
+          "forestTypes",
+          "firebreaks",
+          "fuelManagement",
+          "fireSentry",
+          "villageWeirs",
+          "wildfireCheck",
+          "burnAreasSimplified",
+        ]);
+
+        // Set optional layer data
+        if (optionalData.forestTypes) {
+          setForestTypes(optionalData.forestTypes);
+          console.log("✅ Loaded forest types");
+        }
+
+        if (optionalData.firebreaks) {
+          setFirebreakData(optionalData.firebreaks);
+          console.log("✅ Loaded firebreak data");
+        }
+
+        if (optionalData.fuelManagement) {
+          setFuelManagementData(optionalData.fuelManagement);
+          console.log("✅ Loaded fuel management data");
+        }
+
+        if (optionalData.fireSentry) {
+          setFireSentryData(optionalData.fireSentry);
+          console.log("✅ Loaded fire sentry data");
+        }
+
+        if (optionalData.villageWeirs) {
+          setVillageWeirsData(optionalData.villageWeirs);
+          console.log("✅ Loaded village weirs data");
+        }
+
+        if (optionalData.wildfireCheck) {
+          setWildfireCheckData(optionalData.wildfireCheck);
+          console.log("✅ Loaded wildfire check data");
+        }
+
+        if (optionalData.burnAreasSimplified) {
+          setBurnAreasData(optionalData.burnAreasSimplified);
+          console.log("✅ Loaded simplified burn areas data");
+        }
+
+        console.log("🎉 All optional layers loaded successfully!");
       } catch (err) {
-        console.error("Failed to load villages:", err);
+        console.error("Failed to load map data:", err);
         setError(err.message);
-      } finally {
         setLoading(false);
       }
     };
 
-    loadVillages();
-  }, []);
-
-  // Load forest types data
-  useEffect(() => {
-    const loadForestTypes = async () => {
-      try {
-        const response = await fetch(getApiUrl("forest-types"));
-        const result = await response.json();
-        if (result.success) {
-          setForestTypes(result.data);
-        }
-      } catch (err) {
-        console.error("Failed to load forest types:", err);
-      }
-    };
-
-    loadForestTypes();
-  }, []);
-
-  // Load firebreak data
-  useEffect(() => {
-    const loadFirebreakData = async () => {
-      try {
-        const response = await fetch(getApiUrl("firebreaks"));
-        const result = await response.json();
-        if (result.success) {
-          setFirebreakData(result.data);
-        }
-      } catch (err) {
-        console.error("Failed to load firebreak data:", err);
-      }
-    };
-
-    loadFirebreakData();
-  }, []);
-
-  // Load fuel management data
-  useEffect(() => {
-    const loadFuelManagementData = async () => {
-      try {
-        const response = await fetch(getApiUrl("fuel-management"));
-        const result = await response.json();
-        if (result.success) {
-          setFuelManagementData(result.data);
-        }
-      } catch (err) {
-        console.error("Failed to load fuel management data:", err);
-      }
-    };
-
-    loadFuelManagementData();
-  }, []);
-
-  // Load fire sentry stations data
-  useEffect(() => {
-    const loadFireSentryData = async () => {
-      try {
-        const response = await fetch(getApiUrl("fire-sentry-stations"));
-        const result = await response.json();
-        if (result.success) {
-          setFireSentryData(result.data);
-        }
-      } catch (err) {
-        console.error("Failed to load fire sentry stations:", err);
-      }
-    };
-
-    loadFireSentryData();
-  }, []);
-
-  // Load village weirs data
-  useEffect(() => {
-    const loadVillageWeirsData = async () => {
-      try {
-        const response = await fetch(getApiUrl("village-weirs"));
-        const result = await response.json();
-        if (result.success) {
-          setVillageWeirsData(result.data);
-        }
-      } catch (err) {
-        console.error("Failed to load village weirs:", err);
-      }
-    };
-
-    loadVillageWeirsData();
-  }, []);
-
-  // Load wildfire check points data
-  useEffect(() => {
-    const loadWildfireCheckData = async () => {
-      try {
-        const response = await fetch(getApiUrl("wildfire-check-points"));
-        const result = await response.json();
-        if (result.success) {
-          setWildfireCheckData(result.data);
-        }
-      } catch (err) {
-        console.error("Failed to load wildfire check points:", err);
-      }
-    };
-
-    loadWildfireCheckData();
-  }, []);
-
-  // Load burn areas 2024 data (simplified for performance)
-  useEffect(() => {
-    const loadBurnAreasData = async () => {
-      try {
-        const response = await fetch(getApiUrl("burn-areas-2024-simplified"));
-        const result = await response.json();
-        if (result.success) {
-          setBurnAreasData(result.data);
-          console.log("🔥 Loaded simplified burn areas:", result.message);
-        }
-      } catch (err) {
-        console.error("Failed to load burn areas 2024:", err);
-      }
-    };
-
-    loadBurnAreasData();
+    loadProgressiveData();
   }, []);
 
   // Load building data for selected village
@@ -461,168 +409,58 @@ const Map = ({ onVillageSelect, selectedVillage }) => {
     loadBuildingData();
   }, [selectedVillage]);
 
-  // Show/hide forest types based on village selection and zoom level
+  // Layer visibility management - now controlled by user choices
+  const [userLayerPreferences, setUserLayerPreferences] = useState({
+    forestTypes: false,
+    firebreaks: false,
+    fuelManagement: false,
+    buildings: false,
+    fireSentry: false,
+    villageWeirs: false,
+    wildfireCheck: false,
+    burnAreas: false,
+  });
+
+  // Helper function to toggle layer visibility
+  const toggleLayer = (layerName) => {
+    setUserLayerPreferences((prev) => ({
+      ...prev,
+      [layerName]: !prev[layerName],
+    }));
+  };
+
+  // Update layer visibility based on user preferences and data availability
   useEffect(() => {
-    const minZoomForForest = 11; // Only show forest when zoomed in enough
+    setShowForestTypes(userLayerPreferences.forestTypes && forestTypes);
+    setShowFirebreaks(userLayerPreferences.firebreaks && firebreakData);
+    setShowFuelManagement(
+      userLayerPreferences.fuelManagement && fuelManagementData
+    );
+    setShowBuildings(userLayerPreferences.buildings && buildingData);
+    setShowFireSentry(userLayerPreferences.fireSentry && fireSentryData);
+    setShowVillageWeirs(userLayerPreferences.villageWeirs && villageWeirsData);
+    setShowWildfireCheck(
+      userLayerPreferences.wildfireCheck && wildfireCheckData
+    );
+    setShowBurnAreas(userLayerPreferences.burnAreas && burnAreasData);
+  }, [
+    userLayerPreferences,
+    forestTypes,
+    firebreakData,
+    fuelManagementData,
+    buildingData,
+    fireSentryData,
+    villageWeirsData,
+    wildfireCheckData,
+    burnAreasData,
+  ]);
 
-    if (selectedVillage && forestTypes && currentZoom >= minZoomForForest) {
-      console.log(
-        "🌲 Showing forest types for village:",
-        selectedVillage.name,
-        "at zoom:",
-        currentZoom
-      );
-      setShowForestTypes(true);
-    } else {
-      if (currentZoom < minZoomForForest) {
-        console.log("🌲 Hiding forest types - zoom too low:", currentZoom);
-      } else {
-        console.log("🌲 Hiding forest types");
-      }
-      setShowForestTypes(false);
-    }
-  }, [selectedVillage, forestTypes, currentZoom]);
-
-  // Show/hide firebreaks based on village selection and zoom level
+  // Auto-show buildings when a village is selected (but respect user preference)
   useEffect(() => {
-    const minZoomForFirebreaks = 11; // Same as forest overlay
-
-    if (
-      selectedVillage &&
-      firebreakData &&
-      currentZoom >= minZoomForFirebreaks
-    ) {
-      console.log(
-        "🔥 Showing firebreaks for village:",
-        selectedVillage.name,
-        "at zoom:",
-        currentZoom
-      );
-      setShowFirebreaks(true);
-    } else {
-      if (!selectedVillage) {
-        console.log("🔥 Hiding firebreaks - no village selected");
-      } else if (currentZoom < minZoomForFirebreaks) {
-        console.log("🔥 Hiding firebreaks - zoom too low:", currentZoom);
-      } else if (!firebreakData) {
-        console.log("🔥 Hiding firebreaks - no firebreak data");
-      } else {
-        console.log("🔥 Hiding firebreaks");
-      }
-      setShowFirebreaks(false);
+    if (selectedVillage && buildingData && !userLayerPreferences.buildings) {
+      setUserLayerPreferences((prev) => ({ ...prev, buildings: true }));
     }
-  }, [selectedVillage, firebreakData, currentZoom]);
-
-  // Show/hide fuel management based on village selection and zoom level
-  useEffect(() => {
-    const minZoomForFuelManagement = 11; // Same as forest and firebreak overlays
-
-    if (
-      selectedVillage &&
-      fuelManagementData &&
-      currentZoom >= minZoomForFuelManagement
-    ) {
-      console.log(
-        "🔥 Showing fuel management areas for village:",
-        selectedVillage.name,
-        "at zoom:",
-        currentZoom
-      );
-      setShowFuelManagement(true);
-    } else {
-      if (!selectedVillage) {
-        console.log("🔥 Hiding fuel management - no village selected");
-      } else if (currentZoom < minZoomForFuelManagement) {
-        console.log("🔥 Hiding fuel management - zoom too low:", currentZoom);
-      } else if (!fuelManagementData) {
-        console.log("🔥 Hiding fuel management - no fuel management data");
-      } else {
-        console.log("🔥 Hiding fuel management - unknown reason");
-      }
-      setShowFuelManagement(false);
-    }
-  }, [selectedVillage, fuelManagementData, currentZoom]);
-
-  // Show/hide buildings based on village selection and zoom level
-  useEffect(() => {
-    const minZoomForBuildings = 13; // Show buildings at higher zoom level than forest
-
-    if (selectedVillage && buildingData && currentZoom >= minZoomForBuildings) {
-      console.log(
-        "🏠 Showing buildings for village:",
-        selectedVillage.name,
-        "at zoom:",
-        currentZoom
-      );
-      setShowBuildings(true);
-    } else {
-      if (!selectedVillage) {
-        console.log("🏠 Hiding buildings - no village selected");
-      } else if (currentZoom < minZoomForBuildings) {
-        console.log("🏠 Hiding buildings - zoom too low:", currentZoom);
-      } else if (!buildingData) {
-        console.log("🏠 Hiding buildings - no building data");
-      } else {
-        console.log("🏠 Hiding buildings");
-      }
-      setShowBuildings(false);
-    }
-  }, [selectedVillage, buildingData, currentZoom]);
-
-  // Show/hide fire sentry stations based on zoom level
-  useEffect(() => {
-    const minZoomForFireSentry = 10; // Show fire sentry stations at moderate zoom
-
-    if (fireSentryData && currentZoom >= minZoomForFireSentry) {
-      console.log("🚨 Showing fire sentry stations at zoom:", currentZoom);
-      setShowFireSentry(true);
-    } else {
-      console.log(
-        "🚨 Hiding fire sentry stations - zoom too low:",
-        currentZoom
-      );
-      setShowFireSentry(false);
-    }
-  }, [fireSentryData, currentZoom]);
-
-  // Show/hide village weirs based on zoom level
-  useEffect(() => {
-    const minZoomForVillageWeirs = 11; // Show village weirs at higher zoom
-
-    if (villageWeirsData && currentZoom >= minZoomForVillageWeirs) {
-      console.log("💧 Showing village weirs at zoom:", currentZoom);
-      setShowVillageWeirs(true);
-    } else {
-      console.log("💧 Hiding village weirs - zoom too low:", currentZoom);
-      setShowVillageWeirs(false);
-    }
-  }, [villageWeirsData, currentZoom]);
-
-  // Show/hide wildfire check points based on zoom level
-  useEffect(() => {
-    const minZoomForWildfireCheck = 10; // Show wildfire check points at moderate zoom
-
-    if (wildfireCheckData && currentZoom >= minZoomForWildfireCheck) {
-      console.log("🔍 Showing wildfire check points at zoom:", currentZoom);
-      setShowWildfireCheck(true);
-    } else {
-      console.log(
-        "🔍 Hiding wildfire check points - zoom too low:",
-        currentZoom
-      );
-      setShowWildfireCheck(false);
-    }
-  }, [wildfireCheckData, currentZoom]);
-
-  // Show/hide burn areas based on zoom level (manual control only at high zoom)
-  useEffect(() => {
-    const minZoomForBurnAreas = 12; // Only allow burn areas at high zoom to reduce performance impact
-
-    if (currentZoom < minZoomForBurnAreas && showBurnAreas) {
-      console.log("🔥 Hiding burn areas 2024 - zoom too low:", currentZoom);
-      setShowBurnAreas(false);
-    }
-  }, [currentZoom, showBurnAreas]);
+  }, [selectedVillage, buildingData, userLayerPreferences.buildings]);
 
   // Forest overlay component
   const ForestOverlay = ({ map }) => {
@@ -1443,30 +1281,7 @@ const Map = ({ onVillageSelect, selectedVillage }) => {
         onBasemapChange={setCurrentBasemap}
       />
 
-      {/* Burn Areas Toggle Button */}
-      {burnAreasData && currentZoom >= 12 && (
-        <Box
-          position="absolute"
-          top={4}
-          left={4}
-          bg="white"
-          p={2}
-          borderRadius="md"
-          boxShadow="lg"
-          zIndex={1000}
-        >
-          <Button
-            size="sm"
-            colorScheme={showBurnAreas ? "red" : "gray"}
-            onClick={() => setShowBurnAreas(!showBurnAreas)}
-            leftIcon={showBurnAreas ? "🔥" : "🔥"}
-          >
-            {showBurnAreas ? "ซ่อนไฟไหม้ 2024" : "แสดงไฟไหม้ 2024"}
-          </Button>
-        </Box>
-      )}
-
-      {/* Map Legend */}
+      {/* Interactive Map Legend */}
       <Box
         position="absolute"
         bottom={7}
@@ -1477,172 +1292,331 @@ const Map = ({ onVillageSelect, selectedVillage }) => {
         boxShadow="lg"
         zIndex={1000}
         fontSize="sm"
+        maxWidth="280px"
       >
         <Text fontWeight="bold" mb={2}>
-          สัญลักษณ์
+          🗺️ สัญลักษณ์แผนที่
         </Text>
-        <VStack align="start" spacing={1}>
+
+        {/* Village Status Legend */}
+        <VStack align="start" spacing={1} mb={3}>
+          <Text fontSize="xs" fontWeight="bold" color="gray.600">
+            หมู่บ้าน:
+          </Text>
           <HStack>
             <Box w={4} h={4} bg="#5ab14c" borderRadius="sm" />
-            <Text>มีแผนแล้ว</Text>
-          </HStack>
-          <HStack>
-            {/*
-            <Box w={4} h={4} bg="#dc2626" borderRadius="sm" />
-            <Text>ต้องการอาสา+เงิน</Text>
-            */}
-          </HStack>
-          <HStack>
-            {/*
-            <Box w={4} h={4} bg="#f59e0b" borderRadius="sm" />
-            <Text>ต้องการอาสา</Text>
-            */}
-          </HStack>
-          <HStack>
-            {/*
-            <Box w={4} h={4} bg="#3b82f6" borderRadius="sm" />
-            <Text>ต้องการเงิน</Text>
-            */}
+            <Text fontSize="xs">มีแผนแล้ว</Text>
           </HStack>
           <HStack>
             <Box w={4} h={4} bg="#F47B20" borderRadius="sm" />
-            <Text>ยังไม่มีแผน</Text>
+            <Text fontSize="xs">ยังไม่มีแผน</Text>
           </HStack>
-        </VStack>
-
-        {selectedVillage && (
-          <>
-            <Box my={2} height="1px" bg="gray.300" />
+          {selectedVillage && (
             <HStack>
               <Box
                 w={4}
                 h={4}
                 border="3px solid #FFD700"
-                opacity={0}
-                bg="transparent" // No fill, just border like the actual selected village
+                bg="transparent"
                 borderRadius="sm"
               />
               <Text fontSize="xs" color="gray.600">
                 หมู่บ้านที่เลือก
               </Text>
             </HStack>
-          </>
-        )}
+          )}
+        </VStack>
+
+        {/* Interactive Layer Controls */}
+        <Box my={2} height="1px" bg="gray.300" />
+        <Text fontSize="xs" fontWeight="bold" color="gray.600" mb={2}>
+          ชั้นข้อมูล (คลิกเพื่อเปิด/ปิด):
+        </Text>
+
+        {/* Forest Types */}
+        <HStack
+          cursor="pointer"
+          onClick={() => toggleLayer("forestTypes")}
+          opacity={!forestTypes ? 0.5 : 1}
+          bg={userLayerPreferences.forestTypes ? "green.50" : "transparent"}
+          p={1}
+          borderRadius="md"
+          _hover={forestTypes ? { bg: "green.100" } : {}}
+          mb={1}
+        >
+          <Text fontSize="xs" mr={2}>
+            🌲
+          </Text>
+          <Text
+            fontSize="xs"
+            fontWeight={userLayerPreferences.forestTypes ? "bold" : "normal"}
+          >
+            ประเภทป่าไม้
+          </Text>
+          {!forestTypes && (
+            <Text fontSize="xs" color="gray.400">
+              (ไม่มีข้อมูล)
+            </Text>
+          )}
+        </HStack>
 
         {showForestTypes && (
-          <>
-            <Box my={2} height="1px" bg="gray.300" />
-            <Text fontWeight="bold" mb={2} fontSize="xs">
-              🌲 ประเภทป่าไม้
-            </Text>
-            <VStack align="start" spacing={1} fontSize="xs">
-              <HStack>
-                <Box w={3} h={3} bg="#0D4F3C" borderRadius="sm" />
-                <Text>ป่าดิบเขา</Text>
-              </HStack>
-              <HStack>
-                <Box w={3} h={3} bg="#2F855A" borderRadius="sm" />
-                <Text>ป่าดิบแล้ง</Text>
-              </HStack>
-              <HStack>
-                <Box w={3} h={3} bg="#68D391" borderRadius="sm" />
-                <Text>ป่าเต็งรัง</Text>
-              </HStack>
-              <HStack>
-                <Box w={3} h={3} bg="#38A169" borderRadius="sm" />
-                <Text>ป่าเบญจพรรณ</Text>
-              </HStack>
-              <HStack>
-                <Box w={3} h={3} bg="#D69E2E" borderRadius="sm" />
-                <Text>สวนป่าสัก</Text>
-              </HStack>
-            </VStack>
-          </>
+          <VStack align="start" spacing={1} fontSize="xs" ml={4} mb={2}>
+            <HStack>
+              <Box w={3} h={3} bg="#0D4F3C" borderRadius="sm" />
+              <Text>ป่าดิบเขา</Text>
+            </HStack>
+            <HStack>
+              <Box w={3} h={3} bg="#2F855A" borderRadius="sm" />
+              <Text>ป่าดิบแล้ง</Text>
+            </HStack>
+            <HStack>
+              <Box w={3} h={3} bg="#68D391" borderRadius="sm" />
+              <Text>ป่าเต็งรัง</Text>
+            </HStack>
+            <HStack>
+              <Box w={3} h={3} bg="#38A169" borderRadius="sm" />
+              <Text>ป่าเบญจพรรณ</Text>
+            </HStack>
+            <HStack>
+              <Box w={3} h={3} bg="#D69E2E" borderRadius="sm" />
+              <Text>สวนป่าสัก</Text>
+            </HStack>
+          </VStack>
         )}
+
+        {/* Firebreaks */}
+        <HStack
+          cursor="pointer"
+          onClick={() => toggleLayer("firebreaks")}
+          opacity={!firebreakData ? 0.5 : 1}
+          bg={userLayerPreferences.firebreaks ? "orange.50" : "transparent"}
+          p={1}
+          borderRadius="md"
+          _hover={firebreakData ? { bg: "orange.100" } : {}}
+          mb={1}
+        >
+          <Text fontSize="xs" mr={2}>
+            🔥
+          </Text>
+          <Text
+            fontSize="xs"
+            fontWeight={userLayerPreferences.firebreaks ? "bold" : "normal"}
+          >
+            แนวกันไฟ
+          </Text>
+          {!firebreakData && (
+            <Text fontSize="xs" color="gray.400">
+              (ไม่มีข้อมูล)
+            </Text>
+          )}
+        </HStack>
 
         {showFirebreaks && (
-          <>
-            <Box my={2} height="1px" bg="gray.300" />
-            <Text fontWeight="bold" mb={2} fontSize="xs">
-              🔥 แนวกันไฟ
-            </Text>
-            <VStack align="start" spacing={1} fontSize="xs">
-              <HStack>
-                <Box
-                  w={3}
-                  h="1px"
-                  bg="#FF4500"
-                  borderRadius="sm"
-                  border="1px dashed #FF4500"
-                />
-                <Text>แนวกันไฟป่า</Text>
-              </HStack>
-            </VStack>
-          </>
+          <VStack align="start" spacing={1} fontSize="xs" ml={4} mb={2}>
+            <HStack>
+              <Box w={3} h="1px" bg="#FF4500" border="1px dashed #FF4500" />
+              <Text>แนวกันไฟป่า</Text>
+            </HStack>
+          </VStack>
         )}
+
+        {/* Fuel Management */}
+        <HStack
+          cursor="pointer"
+          onClick={() => toggleLayer("fuelManagement")}
+          opacity={!fuelManagementData ? 0.5 : 1}
+          bg={userLayerPreferences.fuelManagement ? "yellow.50" : "transparent"}
+          p={1}
+          borderRadius="md"
+          _hover={fuelManagementData ? { bg: "yellow.100" } : {}}
+          mb={1}
+        >
+          <Text fontSize="xs" mr={2}>
+            🔧
+          </Text>
+          <Text
+            fontSize="xs"
+            fontWeight={userLayerPreferences.fuelManagement ? "bold" : "normal"}
+          >
+            จัดการเชื้อเพลิง
+          </Text>
+          {!fuelManagementData && (
+            <Text fontSize="xs" color="gray.400">
+              (ไม่มีข้อมูล)
+            </Text>
+          )}
+        </HStack>
 
         {showFuelManagement && (
-          <>
-            <Box my={2} height="1px" bg="gray.300" />
-            <Text fontWeight="bold" mb={2} fontSize="xs">
-              🔥 พื้นที่จัดการเชื้อเพลิง
-            </Text>
-            <VStack align="start" spacing={1} fontSize="xs">
-              <HStack>
-                <Box w={3} h={3} bg="#FF6B35" borderRadius="sm" />
-                <Text>ชิงเผา</Text>
-              </HStack>
-              <HStack>
-                <Box w={3} h={3} bg="#4CAF50" borderRadius="sm" />
-                <Text>ป้องกันไฟ</Text>
-              </HStack>
-              <HStack>
-                <Box w={3} h={3} bg="#2E7D32" borderRadius="sm" />
-                <Text>ปลูกเสริมป่า</Text>
-              </HStack>
-            </VStack>
-          </>
+          <VStack align="start" spacing={1} fontSize="xs" ml={4} mb={2}>
+            <HStack>
+              <Box w={3} h={3} bg="#FF6B35" borderRadius="sm" />
+              <Text>ชิงเผา</Text>
+            </HStack>
+            <HStack>
+              <Box w={3} h={3} bg="#4CAF50" borderRadius="sm" />
+              <Text>ป้องกันไฟ</Text>
+            </HStack>
+            <HStack>
+              <Box w={3} h={3} bg="#2E7D32" borderRadius="sm" />
+              <Text>ปลูกเสริมป่า</Text>
+            </HStack>
+          </VStack>
         )}
 
-        {showBuildings && (
-          <>
-            <Box my={2} height="1px" bg="gray.300" />
-            <Text fontWeight="bold" mb={2} fontSize="xs">
-              🏠 อาคารในหมู่บ้าน
+        {/* Fire Sentry */}
+        <HStack
+          cursor="pointer"
+          onClick={() => toggleLayer("fireSentry")}
+          opacity={!fireSentryData ? 0.5 : 1}
+          bg={userLayerPreferences.fireSentry ? "purple.50" : "transparent"}
+          p={1}
+          borderRadius="md"
+          _hover={fireSentryData ? { bg: "purple.100" } : {}}
+          mb={1}
+        >
+          <Text fontSize="xs" mr={2}>
+            🚨
+          </Text>
+          <Text
+            fontSize="xs"
+            fontWeight={userLayerPreferences.fireSentry ? "bold" : "normal"}
+          >
+            ด่านเฝ้าไฟ
+          </Text>
+          {!fireSentryData && (
+            <Text fontSize="xs" color="gray.400">
+              (ไม่มีข้อมูล)
             </Text>
-            <VStack align="start" spacing={1} fontSize="xs">
-              <HStack>
-                <Box w={3} h={3} bg="#8B4513" borderRadius="sm" />
-                <Text>อาคาร/บ้านเรือน</Text>
-              </HStack>
-              {buildingData && (
-                <Text fontSize="xs" color="gray.600">
-                  จำนวน: {buildingData.features.length} หลัง
-                </Text>
-              )}
-            </VStack>
-          </>
-        )}
+          )}
+        </HStack>
+
+        {/* Village Weirs */}
+        <HStack
+          cursor="pointer"
+          onClick={() => toggleLayer("villageWeirs")}
+          opacity={!villageWeirsData ? 0.5 : 1}
+          bg={userLayerPreferences.villageWeirs ? "blue.50" : "transparent"}
+          p={1}
+          borderRadius="md"
+          _hover={villageWeirsData ? { bg: "blue.100" } : {}}
+          mb={1}
+        >
+          <Text fontSize="xs" mr={2}>
+            💧
+          </Text>
+          <Text
+            fontSize="xs"
+            fontWeight={userLayerPreferences.villageWeirs ? "bold" : "normal"}
+          >
+            ฝายน้ำ
+          </Text>
+          {!villageWeirsData && (
+            <Text fontSize="xs" color="gray.400">
+              (ไม่มีข้อมูล)
+            </Text>
+          )}
+        </HStack>
+
+        {/* Wildfire Check */}
+        <HStack
+          cursor="pointer"
+          onClick={() => toggleLayer("wildfireCheck")}
+          opacity={!wildfireCheckData ? 0.5 : 1}
+          bg={userLayerPreferences.wildfireCheck ? "teal.50" : "transparent"}
+          p={1}
+          borderRadius="md"
+          _hover={wildfireCheckData ? { bg: "teal.100" } : {}}
+          mb={1}
+        >
+          <Text fontSize="xs" mr={2}>
+            🔍
+          </Text>
+          <Text
+            fontSize="xs"
+            fontWeight={userLayerPreferences.wildfireCheck ? "bold" : "normal"}
+          >
+            จุดตรวจไฟ
+          </Text>
+          {!wildfireCheckData && (
+            <Text fontSize="xs" color="gray.400">
+              (ไม่มีข้อมูล)
+            </Text>
+          )}
+        </HStack>
+
+        {/* Buildings */}
+        <HStack
+          cursor="pointer"
+          onClick={() => toggleLayer("buildings")}
+          opacity={!buildingData ? 0.5 : 1}
+          bg={userLayerPreferences.buildings ? "orange.50" : "transparent"}
+          p={1}
+          borderRadius="md"
+          _hover={buildingData ? { bg: "orange.100" } : {}}
+          mb={1}
+        >
+          <Text fontSize="xs" mr={2}>
+            🏠
+          </Text>
+          <Text
+            fontSize="xs"
+            fontWeight={userLayerPreferences.buildings ? "bold" : "normal"}
+          >
+            อาคาร
+          </Text>
+          {!buildingData && (
+            <Text fontSize="xs" color="gray.400">
+              (เลือกหมู่บ้าน)
+            </Text>
+          )}
+          {buildingData && (
+            <Text fontSize="xs" color="gray.600">
+              ({buildingData.features.length} หลัง)
+            </Text>
+          )}
+        </HStack>
+
+        {/* Burn Areas */}
+        <HStack
+          cursor="pointer"
+          onClick={() => toggleLayer("burnAreas")}
+          opacity={!burnAreasData ? 0.5 : 1}
+          bg={userLayerPreferences.burnAreas ? "red.50" : "transparent"}
+          p={1}
+          borderRadius="md"
+          _hover={burnAreasData ? { bg: "red.100" } : {}}
+          mb={1}
+        >
+          <Text fontSize="xs" mr={2}>
+            🔥
+          </Text>
+          <Text
+            fontSize="xs"
+            fontWeight={userLayerPreferences.burnAreas ? "bold" : "normal"}
+          >
+            ไฟไหม้ 2024
+          </Text>
+          {!burnAreasData && (
+            <Text fontSize="xs" color="gray.400">
+              (ไม่มีข้อมูล)
+            </Text>
+          )}
+          {burnAreasData && (
+            <Text fontSize="xs" color="gray.600">
+              ({burnAreasData.features.length.toLocaleString()} พื้นที่)
+            </Text>
+          )}
+        </HStack>
 
         {showBurnAreas && (
-          <>
-            <Box my={2} height="1px" bg="gray.300" />
-            <Text fontWeight="bold" mb={2} fontSize="xs">
-              🔥 พื้นที่ไฟไหม้ 2024
-            </Text>
-            <VStack align="start" spacing={1} fontSize="xs">
-              <HStack>
-                <Box w={3} h={3} bg="#FF4500" borderRadius="sm" />
-                <Text>รอยไฟไหม้</Text>
-              </HStack>
-              {burnAreasData && (
-                <Text fontSize="xs" color="gray.600">
-                  จำนวน: {burnAreasData.features.length.toLocaleString()}{" "}
-                  พื้นที่
-                </Text>
-              )}
-            </VStack>
-          </>
+          <VStack align="start" spacing={1} fontSize="xs" ml={4} mb={2}>
+            <HStack>
+              <Box w={3} h={3} bg="#FF4500" borderRadius="sm" />
+              <Text>รอยไฟไหม้</Text>
+            </HStack>
+          </VStack>
         )}
       </Box>
     </Box>
