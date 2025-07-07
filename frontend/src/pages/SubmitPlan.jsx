@@ -41,6 +41,7 @@ import {
 import { AddIcon, DeleteIcon, CalendarIcon } from "@chakra-ui/icons";
 import { useState } from "react";
 import Header from "../components/Header";
+import { getApiUrl } from "../config/api";
 
 const SubmitPlan = () => {
   const toast = useToast();
@@ -203,18 +204,13 @@ const SubmitPlan = () => {
       console.log("Submitting form data:", formData);
 
       // Submit to API
-      const response = await fetch(
-        `${
-          import.meta.env.VITE_API_URL || "http://localhost:3001/api"
-        }/community-plans`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(formData),
-        }
-      );
+      const response = await fetch(getApiUrl("/community-plans"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
       const result = await response.json();
 

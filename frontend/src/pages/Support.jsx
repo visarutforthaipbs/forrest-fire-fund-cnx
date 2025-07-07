@@ -53,6 +53,7 @@ import {
   FaCheckCircle,
 } from "react-icons/fa";
 import Header from "../components/Header";
+import { getApiUrl } from "../config/api";
 
 const Support = () => {
   const [villages, setVillages] = useState([]);
@@ -233,18 +234,13 @@ const Support = () => {
       };
 
       // Send to backend API
-      const response = await fetch(
-        `${
-          import.meta.env.VITE_API_URL || "http://localhost:3001/api"
-        }/support`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(supportData),
-        }
-      );
+      const response = await fetch(getApiUrl("/support"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(supportData),
+      });
 
       const result = await response.json();
 
