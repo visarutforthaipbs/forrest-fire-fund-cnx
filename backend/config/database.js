@@ -1,10 +1,17 @@
 import mongoose from "mongoose";
 
 const MONGODB_URI =
+  process.env.MONGODB_URI ||
   "mongodb+srv://visarut298:Popartpop01@fire-submit-plan.fsz1zcq.mongodb.net/fire-management?retryWrites=true&w=majority&appName=fire-submit-plan";
 
 const connectDB = async () => {
   try {
+    if (!MONGODB_URI) {
+      throw new Error("MONGODB_URI environment variable is not defined");
+    }
+
+    console.log("🔌 Connecting to MongoDB...");
+
     const conn = await mongoose.connect(MONGODB_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
