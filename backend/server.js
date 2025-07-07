@@ -349,6 +349,7 @@ app.post("/api/batch-data", (req, res) => {
 
     const availableDatasets = [
       "villages",
+      "villagesLight", // New simplified version
       "stats",
       "forestTypes",
       "firebreaks",
@@ -367,7 +368,27 @@ app.post("/api/batch-data", (req, res) => {
       try {
         switch (dataset) {
           case "villages":
-            batchData.villages = villages;
+            // For batch requests, return simplified villages data to prevent memory issues
+            batchData.villages = villages.slice(0, 100).map((village) => ({
+              id: village.id,
+              name: village.name,
+              code: village.code,
+              district: village.district,
+              subdistrict: village.subdistrict,
+              province: village.province,
+              status: village.status,
+              // Exclude heavy coordinates and gisData
+            }));
+            break;
+          case "villagesLight":
+            // Lightweight version with just essential data
+            batchData.villagesLight = villages.map((village) => ({
+              id: village.id,
+              name: village.name,
+              district: village.district,
+              subdistrict: village.subdistrict,
+              status: village.status,
+            }));
             break;
           case "stats":
             batchData.stats = calculateStats();
