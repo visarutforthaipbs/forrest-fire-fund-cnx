@@ -43,9 +43,9 @@ let cachedData = {};
 
 const loadDataFiles = () => {
   try {
-    console.log("📦 Loading data files into memory...");
+    console.log("📦 Loading essential data files into memory...");
 
-    // Load village and community plan data
+    // Load only essential village and community plan data at startup
     gisData = JSON.parse(
       readFileSync(join(__dirname, "allfvill_newuid.geojson"), "utf8")
     );
@@ -53,7 +53,7 @@ const loadDataFiles = () => {
       readFileSync(join(__dirname, "comunity-plan.json"), "utf8")
     );
 
-    // Cache all GeoJSON files
+    // Initialize cache object but don't load large files yet (lazy loading)
     const dataFiles = [
       { key: "forestTypes", file: "forrest-type-cnx.json" },
       { key: "firebreaks", file: "wildfire_protect_all-20vills.geojson" },
@@ -64,18 +64,14 @@ const loadDataFiles = () => {
       { key: "burnAreas", file: "burn_area_2024.geojson" },
     ];
 
+    // Only check file existence, don't load them yet
     dataFiles.forEach(({ key, file }) => {
-      try {
-        const filePath = join(__dirname, "data", file);
-        if (existsSync(filePath)) {
-          cachedData[key] = JSON.parse(readFileSync(filePath, "utf8"));
-          console.log(`✅ Cached ${key} data`);
-        } else {
-          console.log(`⚠️  File not found: ${file}`);
-          cachedData[key] = null;
-        }
-      } catch (error) {
-        console.error(`❌ Error loading ${file}:`, error.message);
+      const filePath = join(__dirname, "data", file);
+      if (existsSync(filePath)) {
+        cachedData[key] = null; // Mark as available but not loaded
+        console.log(`📁 Found ${key} data file (will load on demand)`);
+      } else {
+        console.log(`⚠️  File not found: ${file}`);
         cachedData[key] = null;
       }
     });
@@ -84,11 +80,51 @@ const loadDataFiles = () => {
     console.log(
       `✅ Loaded ${Object.keys(communityPlans.villages).length} community plans`
     );
-    console.log(`✅ Cached ${Object.keys(cachedData).length} data files`);
+    console.log(
+      `📁 ${
+        Object.keys(cachedData).length
+      } data files available for lazy loading`
+    );
   } catch (error) {
-    console.error("❌ Error loading data files:", error);
+    console.error("❌ Error loading essential data files:", error);
     process.exit(1);
   }
+};
+
+// Lazy loading function for large datasets
+const loadDatasetIfNeeded = (key) => {
+  if (cachedData[key] !== null) {
+    return cachedData[key]; // Already loaded or doesn't exist
+  }
+
+  const fileMap = {
+    forestTypes: "forrest-type-cnx.json",
+    firebreaks: "wildfire_protect_all-20vills.geojson",
+    fuelManagement: "Fuel_Manage_20vills.geojson",
+    fireSentry: "FireSentry_Station_All.geojson",
+    villageWeirs: "Village_Weir_All.geojson",
+    wildfireCheck: "WildFire_Check_All_1.geojson",
+    burnAreas: "burn_area_2024.geojson",
+  };
+
+  const file = fileMap[key];
+  if (!file) return null;
+
+  try {
+    const filePath = join(__dirname, "data", file);
+    if (existsSync(filePath)) {
+      console.log(`📦 Lazy loading ${key} data...`);
+      const data = JSON.parse(readFileSync(filePath, "utf8"));
+      cachedData[key] = data;
+      console.log(`✅ Loaded ${key} data on demand`);
+      return data;
+    }
+  } catch (error) {
+    console.error(`❌ Error lazy loading ${key}:`, error.message);
+    cachedData[key] = null;
+  }
+
+  return null;
 };
 
 // Load all data on startup
@@ -394,32 +430,32 @@ app.post("/api/batch-data", (req, res) => {
             batchData.stats = calculateStats();
             break;
           case "forestTypes":
-            batchData.forestTypes = cachedData.forestTypes;
+            batchData.forestTypes = loadDatasetIfNeeded("forestTypes");
             break;
           case "firebreaks":
-            batchData.firebreaks = cachedData.firebreaks;
+            batchData.firebreaks = loadDatasetIfNeeded("firebreaks");
             break;
           case "fuelManagement":
-            batchData.fuelManagement = cachedData.fuelManagement;
+            batchData.fuelManagement = loadDatasetIfNeeded("fuelManagement");
             break;
           case "fireSentry":
-            batchData.fireSentry = cachedData.fireSentry;
+            batchData.fireSentry = loadDatasetIfNeeded("fireSentry");
             break;
           case "villageWeirs":
-            batchData.villageWeirs = cachedData.villageWeirs;
+            batchData.villageWeirs = loadDatasetIfNeeded("villageWeirs");
             break;
           case "wildfireCheck":
-            batchData.wildfireCheck = cachedData.wildfireCheck;
+            batchData.wildfireCheck = loadDatasetIfNeeded("wildfireCheck");
             break;
           case "burnAreas":
-            batchData.burnAreas = cachedData.burnAreas;
+            batchData.burnAreas = loadDatasetIfNeeded("burnAreas");
             break;
           case "burnAreasSimplified":
-            if (cachedData.burnAreas) {
+            if (loadDatasetIfNeeded("burnAreas")) {
               batchData.burnAreasSimplified = {
                 type: "FeatureCollection",
-                features: cachedData.burnAreas.features
-                  .slice(0, 10000)
+                features: loadDatasetIfNeeded("burnAreas")
+                  .features.slice(0, 10000)
                   .map((feature) => ({
                     type: "Feature",
                     properties: {
@@ -468,7 +504,7 @@ app.get("/api/forest-types", (req, res) => {
   try {
     res.json({
       success: true,
-      data: cachedData.forestTypes,
+      data: loadDatasetIfNeeded("forestTypes"),
     });
   } catch (error) {
     res.status(500).json({
@@ -518,7 +554,7 @@ app.get("/api/firebreaks", (req, res) => {
   try {
     res.json({
       success: true,
-      data: cachedData.firebreaks,
+      data: loadDatasetIfNeeded("firebreaks"),
     });
   } catch (error) {
     res.status(500).json({
@@ -534,7 +570,7 @@ app.get("/api/fuel-management", (req, res) => {
   try {
     res.json({
       success: true,
-      data: cachedData.fuelManagement,
+      data: loadDatasetIfNeeded("fuelManagement"),
     });
   } catch (error) {
     res.status(500).json({
@@ -550,7 +586,7 @@ app.get("/api/fire-sentry-stations", (req, res) => {
   try {
     res.json({
       success: true,
-      data: cachedData.fireSentry,
+      data: loadDatasetIfNeeded("fireSentry"),
     });
   } catch (error) {
     res.status(500).json({
@@ -566,7 +602,7 @@ app.get("/api/village-weirs", (req, res) => {
   try {
     res.json({
       success: true,
-      data: cachedData.villageWeirs,
+      data: loadDatasetIfNeeded("villageWeirs"),
     });
   } catch (error) {
     res.status(500).json({
@@ -582,7 +618,7 @@ app.get("/api/wildfire-check-points", (req, res) => {
   try {
     res.json({
       success: true,
-      data: cachedData.wildfireCheck,
+      data: loadDatasetIfNeeded("wildfireCheck"),
     });
   } catch (error) {
     res.status(500).json({
@@ -598,7 +634,7 @@ app.get("/api/burn-areas-2024", (req, res) => {
   try {
     res.json({
       success: true,
-      data: cachedData.burnAreas,
+      data: loadDatasetIfNeeded("burnAreas"),
     });
   } catch (error) {
     res.status(500).json({
@@ -612,7 +648,7 @@ app.get("/api/burn-areas-2024", (req, res) => {
 // Get burn area 2024 data (simplified for performance)
 app.get("/api/burn-areas-2024-simplified", (req, res) => {
   try {
-    if (!cachedData.burnAreas) {
+    if (!loadDatasetIfNeeded("burnAreas")) {
       return res.status(404).json({
         success: false,
         error: "Burn areas data not available",
@@ -622,8 +658,8 @@ app.get("/api/burn-areas-2024-simplified", (req, res) => {
     // Simplify the data for better performance - take only first 10,000 features
     const simplifiedData = {
       type: "FeatureCollection",
-      features: cachedData.burnAreas.features
-        .slice(0, 10000)
+      features: loadDatasetIfNeeded("burnAreas")
+        .features.slice(0, 10000)
         .map((feature) => ({
           type: "Feature",
           properties: {
@@ -636,7 +672,11 @@ app.get("/api/burn-areas-2024-simplified", (req, res) => {
     res.json({
       success: true,
       data: simplifiedData,
-      message: `Simplified dataset with ${simplifiedData.features.length} features out of ${cachedData.burnAreas.features.length} total`,
+      message: `Simplified dataset with ${
+        simplifiedData.features.length
+      } features out of ${
+        loadDatasetIfNeeded("burnAreas").features.length
+      } total`,
     });
   } catch (error) {
     res.status(500).json({
