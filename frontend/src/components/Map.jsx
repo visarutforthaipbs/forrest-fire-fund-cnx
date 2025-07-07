@@ -289,69 +289,122 @@ const Map = ({ onVillageSelect, selectedVillage }) => {
         // Import the API service
         const apiService = await import("../services/apiService.js");
 
-        // Step 1: Load critical data first (villages and stats)
+        // Step 1: Load critical data using separate endpoints to avoid batch-data issues
         console.log("🚀 Loading critical data (villages & stats)...");
 
-        const criticalData = await apiService.default.getBatchData([
-          "villages",
-          "stats",
+        // Load villages and stats separately to avoid memory issues
+        const [villagesData, statsData] = await Promise.all([
+          apiService.default.getAllVillages(),
+          apiService.default.getStats(),
         ]);
 
-        if (criticalData.villages) {
-          setVillages(criticalData.villages);
-          console.log("✅ Loaded villages:", criticalData.villages.length);
+        if (villagesData) {
+          setVillages(villagesData);
+          console.log("✅ Loaded villages:", villagesData.length);
         }
 
         // Mark loading as complete for basic functionality
         setLoading(false);
 
-        // Step 2: Load optional layers in background
+        // Step 2: Load optional layers in background using individual endpoints
         console.log("📦 Loading optional layers...");
 
-        const optionalData = await apiService.default.getBatchData([
-          "forestTypes",
-          "firebreaks",
-          "fuelManagement",
-          "fireSentry",
-          "villageWeirs",
-          "wildfireCheck",
-          "burnAreasSimplified",
-        ]);
-
-        // Set optional layer data
-        if (optionalData.forestTypes) {
-          setForestTypes(optionalData.forestTypes);
-          console.log("✅ Loaded forest types");
+        // Load each dataset individually to avoid memory issues
+        try {
+          const forestTypesResponse = await fetch(getApiUrl("/forest-types"));
+          if (forestTypesResponse.ok) {
+            const forestResult = await forestTypesResponse.json();
+            if (forestResult.success) {
+              setForestTypes(forestResult.data);
+              console.log("✅ Loaded forest types");
+            }
+          }
+        } catch (error) {
+          console.warn("Failed to load forest types:", error);
         }
 
-        if (optionalData.firebreaks) {
-          setFirebreakData(optionalData.firebreaks);
-          console.log("✅ Loaded firebreak data");
+        try {
+          const firebreaksResponse = await fetch(getApiUrl("/firebreaks"));
+          if (firebreaksResponse.ok) {
+            const firebreaksResult = await firebreaksResponse.json();
+            if (firebreaksResult.success) {
+              setFirebreakData(firebreaksResult.data);
+              console.log("✅ Loaded firebreak data");
+            }
+          }
+        } catch (error) {
+          console.warn("Failed to load firebreaks:", error);
         }
 
-        if (optionalData.fuelManagement) {
-          setFuelManagementData(optionalData.fuelManagement);
-          console.log("✅ Loaded fuel management data");
+        try {
+          const fuelResponse = await fetch(getApiUrl("/fuel-management"));
+          if (fuelResponse.ok) {
+            const fuelResult = await fuelResponse.json();
+            if (fuelResult.success) {
+              setFuelManagementData(fuelResult.data);
+              console.log("✅ Loaded fuel management data");
+            }
+          }
+        } catch (error) {
+          console.warn("Failed to load fuel management:", error);
         }
 
-        if (optionalData.fireSentry) {
-          setFireSentryData(optionalData.fireSentry);
-          console.log("✅ Loaded fire sentry data");
+        try {
+          const sentryResponse = await fetch(
+            getApiUrl("/fire-sentry-stations")
+          );
+          if (sentryResponse.ok) {
+            const sentryResult = await sentryResponse.json();
+            if (sentryResult.success) {
+              setFireSentryData(sentryResult.data);
+              console.log("✅ Loaded fire sentry data");
+            }
+          }
+        } catch (error) {
+          console.warn("Failed to load fire sentry:", error);
         }
 
-        if (optionalData.villageWeirs) {
-          setVillageWeirsData(optionalData.villageWeirs);
-          console.log("✅ Loaded village weirs data");
+        try {
+          const weirsResponse = await fetch(getApiUrl("/village-weirs"));
+          if (weirsResponse.ok) {
+            const weirsResult = await weirsResponse.json();
+            if (weirsResult.success) {
+              setVillageWeirsData(weirsResult.data);
+              console.log("✅ Loaded village weirs data");
+            }
+          }
+        } catch (error) {
+          console.warn("Failed to load village weirs:", error);
         }
 
-        if (optionalData.wildfireCheck) {
-          setWildfireCheckData(optionalData.wildfireCheck);
-          console.log("✅ Loaded wildfire check data");
+        try {
+          const wildfireResponse = await fetch(
+            getApiUrl("/wildfire-check-points")
+          );
+          if (wildfireResponse.ok) {
+            const wildfireResult = await wildfireResponse.json();
+            if (wildfireResult.success) {
+              setWildfireCheckData(wildfireResult.data);
+              console.log("✅ Loaded wildfire check data");
+            }
+          }
+        } catch (error) {
+          console.warn("Failed to load wildfire check:", error);
         }
 
-        if (optionalData.burnAreasSimplified) {
-          setBurnAreasData(optionalData.burnAreasSimplified);
-          console.log("✅ Loaded simplified burn areas data");
+        try {
+          const burnResponse = await fetch(
+            getApiUrl("/burn-areas-2024-simplified")
+          );
+          if (burnResponse.ok) {
+            const burnResult = await burnResponse.json();
+            if (burnResult.success) {
+              setBurnAreasData(burnResult.data);
+              console.log("✅ Loaded simplified burn areas data");
+            }
+          }
+        } catch (error) {
+          console.warn("Failed to load burn areas:", error);
         }
 
         console.log("🎉 All optional layers loaded successfully!");
