@@ -37,6 +37,11 @@ const connectDB = async () => {
     });
   } catch (error) {
     console.error("❌ Error connecting to MongoDB:", error.message);
+    // In production, continue without MongoDB for basic village data
+    if (process.env.NODE_ENV === 'production') {
+      console.log("⚠️  Continuing without MongoDB - some features may be limited");
+      return;
+    }
     process.exit(1);
   }
 };

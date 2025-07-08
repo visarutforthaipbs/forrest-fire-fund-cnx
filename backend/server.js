@@ -15,7 +15,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Connect to MongoDB
-connectDB();
+connectDB().catch(console.error);
 
 // CORS Configuration
 const corsOptions = {
@@ -31,6 +31,9 @@ const corsOptions = {
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 };
+
+// Add explicit preflight handling
+app.options('*', cors(corsOptions));
 
 // Middleware
 app.use(compression()); // Enable gzip compression
